@@ -1,1 +1,0 @@
-(Browser → cloudflared → anime-web → subscriptions.json ← n8n → voir-anime.to → Discord)
