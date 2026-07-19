@@ -1,0 +1,14 @@
+[
+  {
+    "anime_name": "Mushoku Tensei",
+    "anime_url": "https://voir-anime.to/anime/mushoku-tensei-3/",
+    "discord_webhook": "https://discord.com/api/webhooks/000000000000000000/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "last_episode": 0
+  },
+  {
+    "anime_name": "Re:Zero",
+    "anime_url": "https://voir-anime.to/anime/rezero-kara-hajimeru-isekai-seikatsu-s4/",
+    "discord_webhook": "https://discord.com/api/webhooks/000000000000000000/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "last_episode": 12
+  }
+]

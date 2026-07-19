@@ -1,0 +1,26 @@
+#Secrets et configuration locale
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+#Etat mutable
+subscriptions.json
+!subscriptions.example.json
+data/
+*.sqlite
+*.db
+
+#Dépendances
+node_modules/
+
+#Logs
+*.log
+logs/
+coverage/
+
+# OS / éditeurs
+.DS_Store
+.vscode/
+.idea/
