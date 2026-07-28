@@ -22,7 +22,7 @@ services:
     ports:
       # Écoute uniquement sur la loopback : le service n'est joignable que
       # via Tailscale ou le tunnel Cloudflare, jamais exposé au réseau local.
-      - "127.0.0.1:${ANIME_WEB_HOST_PORT:-3000}:3000"
+      - "127.0.0.1:${ANIME_WEB_HOST_PORT:-3001}:3000"
 
     volumes:
       # L'état vit sur l'hôte, jamais dans l'image : le conteneur reste
