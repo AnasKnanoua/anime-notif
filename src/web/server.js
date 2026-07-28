@@ -49,7 +49,7 @@ app.post('/api/subscribe', (req, res) => {
   if (!anime_url.startsWith('https://voir-anime.to/anime/')) return res.status(400).json({ error: 'URL invalide' });
   const subs = readSubs();
   if (subs.find(s => s.anime_url === anime_url)) return res.status(409).json({ error: 'Déjà abonné' });
-  
+
   // Utilisation de la variable masquée
   subs.push({ anime_name, anime_url, discord_webhook: DISCORD_WEBHOOK, last_episode: 0 });
   writeSubs(subs);

@@ -29,7 +29,7 @@ graph LR
         CF
         WEB
         SUBS
-        N8N        
+        N8N
     end
 ```
 
