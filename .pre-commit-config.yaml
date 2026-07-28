@@ -5,7 +5,7 @@ repos:
     hooks:
       - id: gitleaks
         name: detect hardcoded secrets (gitleaks)
-        entry: gitleaks detect --verbose --redact --log-opts="--staged"
+        entry: gitleaks detect --no-git --verbose --redact
         language: system
         pass_filenames: false
   # --- 2. Hygiène générale des fichiers et code ---
