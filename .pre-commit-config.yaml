@@ -1,11 +1,13 @@
 # Configuration des garde-fous pre-commit
 repos:
   # --- 1. Sécurité : Détection de secrets et clés privées ---
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.21.2
+  - repo: local
     hooks:
       - id: gitleaks
-
+        name: detect hardcoded secrets (gitleaks)
+        entry: gitleaks detect --verbose --redact --log-opts="--staged"
+        language: system
+        pass_filenames: false
   # --- 2. Hygiène générale des fichiers et code ---
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
