@@ -1,0 +1,57 @@
+name: anime-notif
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: anime-notif-web:${IMAGE_TAG:-dev}
+    container_name: anime-notif-web
+
+    # Redémarre le conteneur s'il plante ou si Docker redémarre (donc au
+    # reboot du Mac), MAIS pas si tu l'as arrêté volontairement.
+    # `always` le relancerait même après un arrêt manuel — piège classique
+    # quand on veut couper un service pour maintenance.
+    restart: unless-stopped
+
+    env_file: ../.env
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-Europe/Paris}
+
+    ports:
+      # Écoute uniquement sur la loopback : le service n'est joignable que
+      # via Tailscale ou le tunnel Cloudflare, jamais exposé au réseau local.
+      - "127.0.0.1:${ANIME_WEB_HOST_PORT:-3000}:3000"
+
+    volumes:
+      # L'état vit sur l'hôte, jamais dans l'image : le conteneur reste
+      # jetable et remplaçable sans perte de données.
+      - ../data:/data
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+    # Empêche un emballement (fuite mémoire, boucle infinie) d'asphyxier
+    # les autres services du Mac.
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+
+    # Sans rotation, un conteneur bavard peut saturer le disque en quelques
+    # semaines — panne d'exploitation extrêmement fréquente.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    security_opt:
+      # Interdit au processus d'acquérir de nouveaux privilèges (setuid).
+      - no-new-privileges:true
