@@ -1,21 +1,23 @@
 {
   "name": "anime-notif",
   "version": "1.0.0",
-  "description": "> Notifications Discord automatiques à la sortie d'un nouvel épisode d'anime.",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs",
-    "test": "tests"
+  "private": true,
+  "description": "Notifications Discord automatiques à la sortie d'un nouvel épisode d'anime.",
+  "main": "src/web/server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
   },
   "scripts": {
+    "start": "node src/web/server.js",
+    "dev": "node --watch src/web/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "express": "^5.2.1"
-  }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
