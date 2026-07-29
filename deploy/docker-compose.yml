@@ -70,7 +70,7 @@ services:
       - no-new-privileges:true
 
   autoheal:
-    image: willfarrell/autoheal:1.2.2
+    image: willfarrell/autoheal:1.2.0
     container_name: anime-notif-autoheal
     restart: unless-stopped
     environment:
