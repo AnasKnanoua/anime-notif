@@ -55,3 +55,28 @@ services:
     security_opt:
       # Interdit au processus d'acquérir de nouveaux privilèges (setuid).
       - no-new-privileges:true
+
+    labels:
+      - "autoheal=true"
+  uptime-kuma:
+    image: louislam/uptime-kuma:1.23.16
+    container_name: anime-notif-uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3002:3001"
+    volumes:
+      - ../data/uptime-kuma:/app/data
+    security_opt:
+      - no-new-privileges:true
+
+  autoheal:
+    image: willfarrell/autoheal:1.2.2
+    container_name: anime-notif-autoheal
+    restart: unless-stopped
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: autoheal
+      AUTOHEAL_INTERVAL: 30
+    volumes:
+      # Autoheal a besoin de parler au démon Docker pour redémarrer
+      # des conteneurs — accès sensible, on y revient juste après.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
