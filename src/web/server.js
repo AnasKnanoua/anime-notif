@@ -12,6 +12,7 @@ const SUBS_PATH = process.env.SUBSCRIPTIONS_PATH;
 // 🔒 Sécurisation des secrets via l'environnement
 const PASSWORD_HASH = process.env.ANIME_WEB_PASSWORD_HASH;
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL; // ◄ Le webhook est maintenant caché ici
+const PORT = process.env.PORT || 3000;
 
 // Vérification de sécurité au démarrage du serveur
 if (!PASSWORD_HASH || !DISCORD_WEBHOOK) {
