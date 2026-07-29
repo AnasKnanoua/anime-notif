@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const bcrypt = require('bcryptjs'); // ◄ Ajout de bcrypt pour la sécurité
 const app = express();
+const packageJson = require('../../package.json');
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -11,6 +12,7 @@ const SUBS_PATH = process.env.SUBSCRIPTIONS_PATH;
 // 🔒 Sécurisation des secrets via l'environnement
 const PASSWORD_HASH = process.env.ANIME_WEB_PASSWORD_HASH;
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL; // ◄ Le webhook est maintenant caché ici
+const PORT = process.env.PORT || 3000;
 
 // Vérification de sécurité au démarrage du serveur
 if (!PASSWORD_HASH || !DISCORD_WEBHOOK) {
@@ -29,6 +31,55 @@ app.use('/api', (req, res, next) => {
   }
   next();
 });
+
+/**
+ * Sonde de santé.
+ * Vérifie les dépendances critiques au fonctionnement du service —
+ * ici, l'accès en lecture au fichier d'état.
+ * Renvoie 200 si le service peut traiter du trafic, 503 sinon.
+ */
+app.get('/health', (req, res) => {
+  const checks = {};
+  let healthy = true;
+
+  try {
+    fs.accessSync(SUBS_PATH, fs.constants.R_OK);
+    checks.subscriptions_file = 'ok';
+  } catch (err) {
+    checks.subscriptions_file = `unreachable: ${err.code}`;
+    healthy = false;
+  }
+
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'healthy' : 'unhealthy',
+    version: packageJson.version,
+    uptime_seconds: Math.floor(process.uptime()),
+    checks,
+  });
+});
+
+const server = app.listen(PORT, () => {
+  console.log(JSON.stringify({
+    level: 'info', msg: 'server started', port: PORT,
+  }));
+});
+
+/** Arrêt propre : on cesse d'accepter, on laisse finir, on quitte. */
+function shutdown(signal) {
+  console.log(JSON.stringify({ level: 'info', msg: 'shutdown initiated', signal }));
+  server.close(() => {
+    console.log(JSON.stringify({ level: 'info', msg: 'shutdown complete' }));
+    process.exit(0);
+  });
+  // Filet : si des connexions traînent, on force au bout de 10 s
+  setTimeout(() => {
+    console.error(JSON.stringify({ level: 'error', msg: 'forced shutdown' }));
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 function readSubs() {
   if (!fs.existsSync(SUBS_PATH)) return [];

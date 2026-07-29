@@ -1,0 +1,65 @@
+{
+  "name": "Anime Tracker - VoirAnime",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "name": "Toutes les 30 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3202e752-4a38-4997-907a-78eb021bd78b"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst https = require('https');\n\nconst subsPath = '/home/node/.n8n/anime-tracker/subscriptions.json';\nconst subs = JSON.parse(fs.readFileSync(subsPath, 'utf8'));\n\nfunction fetchPage(url) {\n  return new Promise((resolve, reject) => {\n    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } }, res => {\n      let data = '';\n      res.on('data', c => data += c);\n      res.on('end', () => resolve(data));\n    }).on('error', reject);\n  });\n}\n\nfunction fetchImage(url) {\n  return new Promise((resolve, reject) => {\n    https.get(url, { headers: {\n      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',\n      'Referer': 'https://voir-anime.to/'\n    }}, res => {\n      const chunks = [];\n      res.on('data', c => chunks.push(c));\n      res.on('end', () => resolve(Buffer.concat(chunks)));\n    }).on('error', reject);\n  });\n}\n\nfunction postDiscord(webhookUrl, animeName, epNum, epUrl, imageBuffer, imageExt) {\n  return new Promise((resolve, reject) => {\n    const boundary = '----FormBoundary' + Math.random().toString(36).slice(2);\n    const embed = JSON.stringify({\n      embeds: [{\n        title: `🎌 ${animeName} — Épisode ${epNum} disponible !`,\n        url: epUrl,\n        color: 0x6c63ff,\n        image: { url: `attachment://cover.${imageExt}` },\n        fields: [{ name: '🔗 Regarder', value: epUrl }],\n        footer: { text: 'VoirAnime Tracker' }\n      }]\n    });\n    const embedPart = `--${boundary}\\r\\nContent-Disposition: form-data; name=\"payload_json\"\\r\\nContent-Type: application/json\\r\\n\\r\\n${embed}\\r\\n`;\n    const filePart = `--${boundary}\\r\\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"cover.${imageExt}\"\\r\\nContent-Type: image/${imageExt}\\r\\n\\r\\n`;\n    const endPart = `\\r\\n--${boundary}--\\r\\n`;\n    const body = Buffer.concat([\n      Buffer.from(embedPart),\n      Buffer.from(filePart),\n      imageBuffer,\n      Buffer.from(endPart)\n    ]);\n    const hostname = 'discordapp.com';\n    const path = webhookUrl.replace('https://discordapp.com', '');\n    const req = https.request({\n      hostname, path, method: 'POST',\n      headers: {\n        'Content-Type': `multipart/form-data; boundary=${boundary}`,\n        'Content-Length': body.length\n      }\n    }, res => { res.on('data', () => {}); res.on('end', resolve); });\n    req.on('error', reject);\n    req.write(body);\n    req.end();\n  });\n}\n\nfunction postDiscordSimple(webhookUrl, animeName, epNum, epUrl) {\n  return new Promise((resolve, reject) => {\n    const body = JSON.stringify({\n      embeds: [{\n        title: `🎌 ${animeName} — Épisode ${epNum} disponible !`,\n        url: epUrl,\n        color: 0x6c63ff,\n        fields: [{ name: '🔗 Regarder', value: epUrl }],\n        footer: { text: 'VoirAnime Tracker' }\n      }]\n    });\n    const hostname = 'discordapp.com';\n    const path = webhookUrl.replace('https://discordapp.com', '');\n    const req = https.request({\n      hostname, path, method: 'POST',\n      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }\n    }, res => { res.on('data', () => {}); res.on('end', resolve); });\n    req.on('error', reject);\n    req.write(body);\n    req.end();\n  });\n}\n\nconst report = [];\nlet changed = false;\n\nfor (const sub of subs) {\n  try {\n    const html = await fetchPage(sub.anime_url);\n    const baseSlug = sub.anime_url.replace('https://voir-anime.to/anime/', '').replace(/\\/$/, '');\n    const escapedSlug = baseSlug.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n    const regex = new RegExp(`href=\"(https://voir-anime\\\\.to/anime/${escapedSlug}/[^\"]*-(\\\\d+)-vostfr[^\"]*)\"`, 'g');\n\n    const episodes = [];\n    let m;\n    while ((m = regex.exec(html)) !== null) {\n      episodes.push({ url: m[1], num: parseInt(m[2]) });\n    }\n\n    if (!episodes.length) {\n      report.push({ anime: sub.anime_name, status: 'aucun épisode trouvé' });\n      continue;\n    }\n\n    const maxEp = Math.max(...episodes.map(e => e.num));\n    const maxUrl = episodes.find(e => e.num === maxEp).url;\n    const last = sub.last_episode || 0;\n\n    if (maxEp <= last) {\n      report.push({ anime: sub.anime_name, status: `à jour (ep ${last})` });\n      continue;\n    }\n\n    const imgMatch = html.match(/<meta property=\"og:image\" content=\"([^\"]+)\"/);\n    const imageUrl = imgMatch ? imgMatch[1] : '';\n    const imageExt = imageUrl ? (imageUrl.split('.').pop().split('?')[0] || 'jpg') : 'jpg';\n\n    let imageBuffer = null;\n    if (imageUrl) {\n      try { imageBuffer = await fetchImage(imageUrl); } catch(e) {}\n    }\n\n    if (imageBuffer) {\n      await postDiscord(sub.discord_webhook, sub.anime_name, maxEp, maxUrl, imageBuffer, imageExt);\n    } else {\n      await postDiscordSimple(sub.discord_webhook, sub.anime_name, maxEp, maxUrl);\n    }\n\n    sub.last_episode = maxEp;\n    changed = true;\n    report.push({ anime: sub.anime_name, status: `notifié ep ${maxEp}` });\n\n  } catch (e) {\n    report.push({ anime: sub.anime_name, status: 'erreur: ' + e.message });\n  }\n}\n\nif (changed) {\n  fs.writeFileSync(subsPath, JSON.stringify(subs, null, 2));\n}\n\nreturn [{ json: { checked: subs.length, report } }];"
+      },
+      "name": "Check & Notify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "8f55d545-dc26-4063-9579-2a1ad219b5a1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Toutes les 30 min": {
+      "main": [
+        [
+          {
+            "node": "Check & Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1e9bd655-f398-4dc1-8a0d-47c2595e2495",
+  "meta": {
+    "instanceId": "6590bc76294617c47a955757cb441349bb33720f579027a873658468572b1651"
+  },
+  "nodeGroups": [],
+  "id": "7Je8EGI2bcsTMfpx",
+  "tags": []
+}
