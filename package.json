@@ -13,8 +13,8 @@
     "dev": "node --watch src/web/server.js",
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
-    "format": "prettier --write src/ tests/",
-    "format:check": "prettier --check src/ tests/",
+    "format": "prettier --write src/ tests/ .github/",
+    "format:check": "prettier --check src/ tests/ .github/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

@@ -1,0 +1,139 @@
+name: CI
+
+# Déclenché sur chaque push ET chaque pull request vers main.
+# Sans ça, tu pourrais pousser du code cassé sur une branche
+# et ne le découvrir qu'au moment du merge.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Annule les exécutions précédentes sur la même branche.
+# Si tu pushes 3 commits en 2 minutes, seul le dernier est vérifié —
+# inutile de gaspiller des minutes de CI sur des états intermédiaires.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════
+  # Job 1 — Qualité de code (lint + format + tests)
+  # ═══════════════════════════════════════════════════════════════════════
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm' # met en cache node_modules entre les runs
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Vérifier le formatage
+        run: npm run format:check
+
+      - name: Tests
+        run: npm test
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Job 2 — Sécurité (secrets + vulnérabilités)
+  # ═══════════════════════════════════════════════════════════════════════
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # historique complet pour que gitleaks scanne tous les commits
+
+      - name: Scan de secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Audit des dépendances
+        run: npm audit --audit-level=high || true
+        # || true : ne casse pas le build pour l'instant (beaucoup de faux positifs),
+        # mais affiche les vulnérabilités. On durcira à l'étape 12.
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Job 3 — Build et scan de l'image Docker
+  # ═══════════════════════════════════════════════════════════════════════
+  build:
+    needs: [quality, security] # ne build que si les deux premiers jobs passent
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write # nécessaire pour pousser sur GHCR
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Build de l'image web ───────────────────────────────────────────
+      - name: Build image web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          load: true
+          tags: ghcr.io/${{ github.repository }}/web:${{ github.sha }}
+
+      # ── Build de l'image worker ────────────────────────────────────────
+      - name: Build image worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/worker/Dockerfile
+          load: true
+          tags: ghcr.io/${{ github.repository }}/worker:${{ github.sha }}
+
+      # ── Scan de sécurité des images ────────────────────────────────────
+      - name: Scan Trivy — web
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/web:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      - name: Scan Trivy — worker
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/worker:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      # ── Push (seulement sur main, pas sur les PR) ─────────────────────
+      - name: Push images
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          docker push ghcr.io/${{ github.repository }}/web:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}/worker:${{ github.sha }}
+
+          # Tag "latest" en plus du SHA — utile pour le compose en prod,
+          # mais le SHA reste la référence pour le rollback.
+          docker tag ghcr.io/${{ github.repository }}/web:${{ github.sha }} \
+                     ghcr.io/${{ github.repository }}/web:latest
+          docker tag ghcr.io/${{ github.repository }}/worker:${{ github.sha }} \
+                     ghcr.io/${{ github.repository }}/worker:latest
+          docker push ghcr.io/${{ github.repository }}/web:latest
+          docker push ghcr.io/${{ github.repository }}/worker:latest
