@@ -111,6 +111,7 @@ jobs:
           image-ref: ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
           severity: CRITICAL,HIGH
           exit-code: '1'
+          trivyignores: .trivyignore
 
       - name: Scan Trivy — worker
         uses: aquasecurity/trivy-action@v0.36.0
@@ -118,6 +119,7 @@ jobs:
           image-ref: ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }}
           severity: CRITICAL,HIGH
           exit-code: '1'
+          trivyignores: .trivyignore
 
       # ── Push (seulement sur main, pas sur les PR) ─────────────────────
       - name: Push images
