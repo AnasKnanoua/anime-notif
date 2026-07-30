@@ -3,7 +3,7 @@
 # =============================================================================
 # Étage 1 — dépendances de production uniquement
 # =============================================================================
-FROM node:22.11-alpine AS deps
+FROM node:22-alpine3.21 AS deps
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 # =============================================================================
 # Étage 2 — image finale
 # =============================================================================
-FROM node:22.11-alpine AS runtime
+FROM node:22-alpine3.21 AS runtime
 
 # Métadonnées standard OCI — exploitées par les registries et les scanners.
 LABEL org.opencontainers.image.title="anime-notif-web" \

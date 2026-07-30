@@ -11,7 +11,7 @@
 #   - healthcheck basé sur un fichier heartbeat
 # ─────────────────────────────────────────────────────────────────────────────
 
-FROM node:22.11-alpine
+FROM node:22-alpine3.21
 
 LABEL org.opencontainers.image.title="anime-notif-worker" \
       org.opencontainers.image.description="Scraper d'épisodes anime avec notifications Discord"

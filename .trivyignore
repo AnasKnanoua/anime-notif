@@ -1,0 +1,31 @@
+# CVE dans npm lui-même (bundlé dans l'image Node, pas utilisé au runtime).
+# Ces packages ne font pas partie de l'application.
+# Revue : 2026-07-30
+
+# tar (interne npm)
+CVE-2026-59873
+CVE-2026-23745
+CVE-2026-23950
+CVE-2026-24842
+CVE-2026-26960
+CVE-2026-29786
+CVE-2026-31802
+CVE-2026-59874
+
+# brace-expansion (interne npm)
+CVE-2026-13149
+CVE-2026-14257
+
+# minimatch (interne npm)
+CVE-2026-26996
+CVE-2026-27903
+CVE-2026-27904
+
+# cross-spawn (interne npm)
+CVE-2024-21538
+
+# glob (interne npm)
+CVE-2025-64756
+
+# sigstore (interne npm)
+CVE-2026-48815
