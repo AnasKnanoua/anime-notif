@@ -103,11 +103,13 @@ app.get('/api/subscriptions', (req, res) => {
 app.post('/api/subscribe', (req, res) => {
   const { anime_name, anime_url } = req.body;
   if (!anime_name || !anime_url) return res.status(400).json({ error: 'Champs manquants' });
-  if (!anime_url.startsWith('https://voir-anime.to/anime/'))
-    {return res.status(400).json({ error: 'URL invalide' });}
+  if (!anime_url.startsWith('https://voir-anime.to/anime/')) {
+    return res.status(400).json({ error: 'URL invalide' });
+  }
   const subs = readSubs();
-  if (subs.find((s) => s.anime_url === anime_url))
-    {return res.status(409).json({ error: 'Déjà abonné' });}
+  if (subs.find((s) => s.anime_url === anime_url)) {
+    return res.status(409).json({ error: 'Déjà abonné' });
+  }
 
   // Utilisation de la variable masquée
   subs.push({ anime_name, anime_url, discord_webhook: DISCORD_WEBHOOK, last_episode: 0 });

@@ -38,7 +38,23 @@ export default [
                                         // évite le bug du "else" qui ne s'applique pas où tu crois
     },
   },
+  // Fichiers de test — Vitest injecte ces globales automatiquement
+  {
+    files: ['tests/**/*.js'],
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        vi: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+      },
+    },
+  },
 
   // Ignorer les dossiers non pertinents
-  { ignores: ['node_modules/', 'data/', 'coverage/'] },
+  { ignores: ['node_modules/', 'data/', 'coverage/','vitest.config.js'] },
 ];
