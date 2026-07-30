@@ -1,17 +1,11 @@
 name: CI
 
-# Déclenché sur chaque push ET chaque pull request vers main.
-# Sans ça, tu pourrais pousser du code cassé sur une branche
-# et ne le découvrir qu'au moment du merge.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
-# Annule les exécutions précédentes sur la même branche.
-# Si tu pushes 3 commits en 2 minutes, seul le dernier est vérifié —
-# inutile de gaspiller des minutes de CI sur des états intermédiaires.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -31,7 +25,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm' # met en cache node_modules entre les runs
+          cache: 'npm'
 
       - name: Installer les dépendances
         run: npm ci
@@ -55,7 +49,7 @@ jobs:
       - name: Checkout du code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # historique complet pour que gitleaks scanne tous les commits
+          fetch-depth: 0
 
       - name: Scan de secrets (gitleaks)
         uses: gitleaks/gitleaks-action@v2
@@ -64,23 +58,27 @@ jobs:
 
       - name: Audit des dépendances
         run: npm audit --audit-level=high || true
-        # || true : ne casse pas le build pour l'instant (beaucoup de faux positifs),
-        # mais affiche les vulnérabilités. On durcira à l'étape 12.
 
   # ═══════════════════════════════════════════════════════════════════════
   # Job 3 — Build et scan de l'image Docker
   # ═══════════════════════════════════════════════════════════════════════
   build:
-    needs: [quality, security] # ne build que si les deux premiers jobs passent
+    needs: [quality, security]
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
-      packages: write # nécessaire pour pousser sur GHCR
+      packages: write
+
+    env:
+      IMAGE_PREFIX: ghcr.io/${{ github.repository }}
 
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
+
+      - name: Normaliser le nom d'image en minuscules
+        run: echo "IMAGE_PREFIX=${IMAGE_PREFIX,,}" >> "$GITHUB_ENV"
 
       - name: Login GHCR
         uses: docker/login-action@v3
@@ -89,36 +87,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── Build de l'image web ───────────────────────────────────────────
+      # ── Build des images ───────────────────────────────────────────────
       - name: Build image web
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
           load: true
-          tags: ghcr.io/${{ github.repository }}/web:${{ github.sha }}
+          tags: ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
 
-      # ── Build de l'image worker ────────────────────────────────────────
       - name: Build image worker
         uses: docker/build-push-action@v6
         with:
           context: .
           file: src/worker/Dockerfile
           load: true
-          tags: ghcr.io/${{ github.repository }}/worker:${{ github.sha }}
+          tags: ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }}
 
       # ── Scan de sécurité des images ────────────────────────────────────
       - name: Scan Trivy — web
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ghcr.io/${{ github.repository }}/web:${{ github.sha }}
+          image-ref: ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
           severity: CRITICAL,HIGH
           exit-code: '1'
 
       - name: Scan Trivy — worker
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ghcr.io/${{ github.repository }}/worker:${{ github.sha }}
+          image-ref: ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }}
           severity: CRITICAL,HIGH
           exit-code: '1'
 
@@ -126,14 +123,12 @@ jobs:
       - name: Push images
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
-          docker push ghcr.io/${{ github.repository }}/web:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository }}/worker:${{ github.sha }}
+          docker push ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
+          docker push ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }}
 
-          # Tag "latest" en plus du SHA — utile pour le compose en prod,
-          # mais le SHA reste la référence pour le rollback.
-          docker tag ghcr.io/${{ github.repository }}/web:${{ github.sha }} \
-                     ghcr.io/${{ github.repository }}/web:latest
-          docker tag ghcr.io/${{ github.repository }}/worker:${{ github.sha }} \
-                     ghcr.io/${{ github.repository }}/worker:latest
-          docker push ghcr.io/${{ github.repository }}/web:latest
-          docker push ghcr.io/${{ github.repository }}/worker:latest
+          docker tag ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }} \
+                     ${{ env.IMAGE_PREFIX }}/web:latest
+          docker tag ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }} \
+                     ${{ env.IMAGE_PREFIX }}/worker:latest
+          docker push ${{ env.IMAGE_PREFIX }}/web:latest
+          docker push ${{ env.IMAGE_PREFIX }}/worker:latest
