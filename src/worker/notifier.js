@@ -23,7 +23,7 @@ async function downloadImage(imageUrl, userAgent) {
         'User-Agent': userAgent,
         // Referer nécessaire : certains CDN bloquent les requêtes sans referer.
         // Ton workflow n8n l'incluait aussi.
-        'Referer': 'https://voir-anime.to/',
+        Referer: 'https://voir-anime.to/',
       },
       signal: AbortSignal.timeout(10_000),
     });
@@ -78,7 +78,7 @@ function buildMultipartBody(embed, imageBuffer, imageExt) {
  * Utilisé pour respecter le rate limit Discord.
  */
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -104,32 +104,37 @@ async function sendToDiscord(webhookUrl, { body, contentType }) {
         // retry_after est en secondes (parfois fractionnaire).
         const data = await res.json().catch(() => ({}));
         const waitMs = (data.retry_after || 5) * 1000;
-        console.log(JSON.stringify({
-          level: 'warn',
-          msg: 'discord rate limited, attente avant retry',
-          wait_ms: waitMs,
-          attempt,
-        }));
+        console.log(
+          JSON.stringify({
+            level: 'warn',
+            msg: 'discord rate limited, attente avant retry',
+            wait_ms: waitMs,
+            attempt,
+          }),
+        );
         await sleep(waitMs);
         continue;
       }
 
       // Autre erreur HTTP (400, 401, 404...) — pas la peine de réessayer.
-      console.error(JSON.stringify({
-        level: 'error',
-        msg: 'discord webhook error',
-        status: res.status,
-        statusText: res.statusText,
-      }));
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          msg: 'discord webhook error',
+          status: res.status,
+          statusText: res.statusText,
+        }),
+      );
       return false;
-
     } catch (err) {
-      console.error(JSON.stringify({
-        level: 'error',
-        msg: 'discord request failed',
-        error: err.message,
-        attempt,
-      }));
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          msg: 'discord request failed',
+          error: err.message,
+          attempt,
+        }),
+      );
       return false;
     }
   }
@@ -149,14 +154,16 @@ async function sendToDiscord(webhookUrl, { body, contentType }) {
 async function notifyNewEpisode(webhookUrl, episode, userAgent) {
   // ── Construire l'embed (identique à ton workflow n8n) ─────────────────
   const embed = {
-    embeds: [{
-      title: `🎌 ${episode.animeName} — Épisode ${episode.episodeNumber} disponible !`,
-      url: episode.episodeUrl,
-      color: 0x6c63ff,  // même couleur que ton workflow
-      fields: [{ name: '🔗 Regarder', value: episode.episodeUrl }],
-      footer: { text: 'Anime Notif' },
-      timestamp: new Date().toISOString(),
-    }],
+    embeds: [
+      {
+        title: `🎌 ${episode.animeName} — Épisode ${episode.episodeNumber} disponible !`,
+        url: episode.episodeUrl,
+        color: 0x6c63ff, // même couleur que ton workflow
+        fields: [{ name: '🔗 Regarder', value: episode.episodeUrl }],
+        footer: { text: 'Anime Notif' },
+        timestamp: new Date().toISOString(),
+      },
+    ],
   };
 
   // ── Tenter avec image ─────────────────────────────────────────────────

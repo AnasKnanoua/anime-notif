@@ -32,12 +32,14 @@ async function getLatestEpisode(animeUrl, options = {}) {
     });
 
     if (!response.ok) {
-      console.log(JSON.stringify({
-        level: 'warn',
-        msg: 'page inaccessible',
-        url: animeUrl,
-        status: response.status,
-      }));
+      console.log(
+        JSON.stringify({
+          level: 'warn',
+          msg: 'page inaccessible',
+          url: animeUrl,
+          status: response.status,
+        }),
+      );
       return null;
     }
 
@@ -46,9 +48,7 @@ async function getLatestEpisode(animeUrl, options = {}) {
     // ── 2. Extraire les épisodes via regex ───────────────────────────────
     // Le slug est la partie après /anime/ dans l'URL.
     // Ex: "mushoku-tensei-3" depuis "https://voir-anime.to/anime/mushoku-tensei-3/"
-    const baseSlug = animeUrl
-      .replace('https://voir-anime.to/anime/', '')
-      .replace(/\/$/, '');
+    const baseSlug = animeUrl.replace('https://voir-anime.to/anime/', '').replace(/\/$/, '');
 
     // On échappe les caractères spéciaux du slug pour l'utiliser dans la regex
     // (au cas où un nom d'anime contiendrait des caractères regex comme + ou .)
@@ -62,7 +62,7 @@ async function getLatestEpisode(animeUrl, options = {}) {
     //   - groupe 2 : le numéro d'épisode (ici "02")
     const regex = new RegExp(
       `href="(https://voir-anime\\.to/anime/${escapedSlug}/[^"]*-(\\d+)-vostfr[^"]*)"`,
-      'g'
+      'g',
     );
 
     const episodes = [];
@@ -75,17 +75,19 @@ async function getLatestEpisode(animeUrl, options = {}) {
     }
 
     if (episodes.length === 0) {
-      console.log(JSON.stringify({
-        level: 'warn',
-        msg: 'aucun épisode trouvé sur la page',
-        url: animeUrl,
-      }));
+      console.log(
+        JSON.stringify({
+          level: 'warn',
+          msg: 'aucun épisode trouvé sur la page',
+          url: animeUrl,
+        }),
+      );
       return null;
     }
 
     // ── 3. Trouver l'épisode le plus récent ─────────────────────────────
-    const maxEp = Math.max(...episodes.map(e => e.num));
-    const maxEpData = episodes.find(e => e.num === maxEp);
+    const maxEp = Math.max(...episodes.map((e) => e.num));
+    const maxEpData = episodes.find((e) => e.num === maxEp);
 
     // ── 4. Extraire l'image de couverture (og:image) ────────────────────
     // Ton workflow n8n faisait exactement ça : chercher la balise meta og:image
@@ -98,16 +100,17 @@ async function getLatestEpisode(animeUrl, options = {}) {
       episodeUrl: maxEpData.url,
       imageUrl,
     };
-
   } catch (err) {
     // Erreur réseau, timeout, ou parsing — on logue et on continue.
     // Le worker ne doit JAMAIS crasher à cause d'un seul anime.
-    console.error(JSON.stringify({
-      level: 'error',
-      msg: 'erreur scraping',
-      url: animeUrl,
-      error: err.message,
-    }));
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        msg: 'erreur scraping',
+        url: animeUrl,
+        error: err.message,
+      }),
+    );
     return null;
   }
 }

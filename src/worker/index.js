@@ -25,7 +25,7 @@ let running = false;
  * Utilisé pour espacer les requêtes (politesse envers le site).
  */
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -36,7 +36,9 @@ function sleep(ms) {
 function touchHeartbeat() {
   try {
     fs.writeFileSync('/tmp/.heartbeat', '');
-  } catch { /* non bloquant */ }
+  } catch {
+    /* non bloquant */
+  }
 }
 
 /**
@@ -49,7 +51,9 @@ async function pingUptimeKuma() {
     await fetch(`${config.uptimeKumaPushUrl}?status=up&msg=OK`, {
       signal: AbortSignal.timeout(5_000),
     });
-  } catch { /* non bloquant — Uptime Kuma est un bonus, pas une dépendance */ }
+  } catch {
+    /* non bloquant — Uptime Kuma est un bonus, pas une dépendance */
+  }
 }
 
 /**
@@ -67,10 +71,12 @@ async function pingUptimeKuma() {
  */
 async function runCycle() {
   if (running) {
-    console.log(JSON.stringify({
-      level: 'warn',
-      msg: 'cycle précédent encore en cours, on saute celui-ci',
-    }));
+    console.log(
+      JSON.stringify({
+        level: 'warn',
+        msg: 'cycle précédent encore en cours, on saute celui-ci',
+      }),
+    );
     return;
   }
 
@@ -85,11 +91,13 @@ async function runCycle() {
     try {
       subs = readSubscriptions(config.subscriptionsPath);
     } catch (err) {
-      console.error(JSON.stringify({
-        level: 'error',
-        msg: 'impossible de lire subscriptions.json',
-        error: err.message,
-      }));
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          msg: 'impossible de lire subscriptions.json',
+          error: err.message,
+        }),
+      );
       return;
     }
 
@@ -106,23 +114,27 @@ async function runCycle() {
       // Si le scraping échoue (site down, HTML changé), on passe au suivant
       // sans toucher à last_episode — on réessaiera au prochain cycle.
       if (!result) {
-        console.log(JSON.stringify({
-          level: 'warn',
-          msg: 'scraping échoué, on passe',
-          anime: sub.anime_name,
-        }));
+        console.log(
+          JSON.stringify({
+            level: 'warn',
+            msg: 'scraping échoué, on passe',
+            anime: sub.anime_name,
+          }),
+        );
         continue;
       }
 
       const lastKnown = sub.last_episode || 0;
 
       if (result.episodeNumber <= lastKnown) {
-        console.log(JSON.stringify({
-          level: 'info',
-          msg: 'à jour',
-          anime: sub.anime_name,
-          episode: lastKnown,
-        }));
+        console.log(
+          JSON.stringify({
+            level: 'info',
+            msg: 'à jour',
+            anime: sub.anime_name,
+            episode: lastKnown,
+          }),
+        );
         continue;
       }
 
@@ -138,7 +150,7 @@ async function runCycle() {
           {
             animeName: sub.anime_name,
             episodeNumber: ep,
-            episodeUrl: result.episodeUrl,  // URL du dernier (on n'a pas les URLs individuelles)
+            episodeUrl: result.episodeUrl, // URL du dernier (on n'a pas les URLs individuelles)
             imageUrl: result.imageUrl,
           },
           config.userAgent,
@@ -147,22 +159,26 @@ async function runCycle() {
         if (success) {
           lastSuccessful = ep;
           notified++;
-          console.log(JSON.stringify({
-            level: 'info',
-            msg: 'notification envoyée',
-            anime: sub.anime_name,
-            episode: ep,
-          }));
+          console.log(
+            JSON.stringify({
+              level: 'info',
+              msg: 'notification envoyée',
+              anime: sub.anime_name,
+              episode: ep,
+            }),
+          );
         } else {
           // Échec de notification — on arrête ici pour cet anime.
           // last_episode sera mis à jour jusqu'au dernier épisode
           // notifié avec succès, et on retentara le reste au prochain cycle.
-          console.error(JSON.stringify({
-            level: 'error',
-            msg: 'notification échouée, on arrête pour cet anime',
-            anime: sub.anime_name,
-            episode: ep,
-          }));
+          console.error(
+            JSON.stringify({
+              level: 'error',
+              msg: 'notification échouée, on arrête pour cet anime',
+              anime: sub.anime_name,
+              episode: ep,
+            }),
+          );
           break;
         }
 
@@ -187,31 +203,36 @@ async function runCycle() {
     // ── Sauvegarder si quelque chose a changé ───────────────────────────
     if (changed) {
       writeSubscriptions(config.subscriptionsPath, subs);
-      console.log(JSON.stringify({
-        level: 'info',
-        msg: 'état sauvegardé',
-      }));
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          msg: 'état sauvegardé',
+        }),
+      );
     }
 
     // ── Résumé du cycle ─────────────────────────────────────────────────
     const durationMs = Date.now() - cycleStart;
-    console.log(JSON.stringify({
-      level: 'info',
-      msg: 'cycle terminé',
-      checked,
-      notified,
-      duration_ms: durationMs,
-    }));
-
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'cycle terminé',
+        checked,
+        notified,
+        duration_ms: durationMs,
+      }),
+    );
   } catch (err) {
     // Erreur inattendue — on logue mais on ne crashe PAS le worker.
     // Le prochain cycle réessaiera.
-    console.error(JSON.stringify({
-      level: 'error',
-      msg: 'erreur inattendue dans le cycle',
-      error: err.message,
-      stack: err.stack,
-    }));
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        msg: 'erreur inattendue dans le cycle',
+        error: err.message,
+        stack: err.stack,
+      }),
+    );
   } finally {
     running = false;
     touchHeartbeat();
@@ -222,10 +243,11 @@ async function runCycle() {
   if (PUSH_URL) {
     try {
       await fetch(`${PUSH_URL}?status=up&msg=OK&ping=`, { signal: AbortSignal.timeout(5_000) });
-    } catch { /* non bloquant */ }
+    } catch {
+      /* non bloquant */
+    }
   }
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Démarrage
@@ -233,12 +255,14 @@ async function runCycle() {
 
 const INTERVAL_MS = config.intervalMinutes * 60 * 1000;
 
-console.log(JSON.stringify({
-  level: 'info',
-  msg: 'worker démarré',
-  interval_minutes: config.intervalMinutes,
-  subscriptions_path: config.subscriptionsPath,
-}));
+console.log(
+  JSON.stringify({
+    level: 'info',
+    msg: 'worker démarré',
+    interval_minutes: config.intervalMinutes,
+    subscriptions_path: config.subscriptionsPath,
+  }),
+);
 
 // Premier cycle immédiat — on ne veut pas attendre 30 min au démarrage
 // pour savoir si le worker fonctionne.
@@ -246,7 +270,6 @@ runCycle();
 
 // Puis répétition régulière
 const timer = setInterval(runCycle, INTERVAL_MS);
-
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Arrêt gracieux
@@ -269,7 +292,7 @@ function shutdown(signal) {
     process.exit(0);
   }
 
-  console.log(JSON.stringify({ level: 'info', msg: 'cycle en cours, on attend qu\'il finisse...' }));
+  console.log(JSON.stringify({ level: 'info', msg: "cycle en cours, on attend qu'il finisse..." }));
   const check = setInterval(() => {
     if (!running) {
       clearInterval(check);
@@ -282,7 +305,7 @@ function shutdown(signal) {
   setTimeout(() => {
     console.error(JSON.stringify({ level: 'error', msg: 'arrêt forcé après timeout' }));
     process.exit(1);
-  }, 60_000).unref();   // .unref() pour que ce timer ne maintienne pas Node vivant
+  }, 60_000).unref(); // .unref() pour que ce timer ne maintienne pas Node vivant
 }
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));

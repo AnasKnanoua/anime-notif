@@ -16,7 +16,9 @@ const PORT = process.env.PORT || 3000;
 
 // Vérification de sécurité au démarrage du serveur
 if (!PASSWORD_HASH || !DISCORD_WEBHOOK) {
-  console.error("❌ FATAL : Variables d'environnement manquantes ! Vérifie ANIME_WEB_PASSWORD_HASH et DISCORD_WEBHOOK_URL.");
+  console.error(
+    "❌ FATAL : Variables d'environnement manquantes ! Vérifie ANIME_WEB_PASSWORD_HASH et DISCORD_WEBHOOK_URL.",
+  );
   process.exit(1);
 }
 
@@ -59,9 +61,13 @@ app.get('/health', (req, res) => {
 });
 
 const server = app.listen(PORT, () => {
-  console.log(JSON.stringify({
-    level: 'info', msg: 'server started', port: PORT,
-  }));
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      msg: 'server started',
+      port: PORT,
+    }),
+  );
 });
 
 /** Arrêt propre : on cesse d'accepter, on laisse finir, on quitte. */
@@ -97,9 +103,11 @@ app.get('/api/subscriptions', (req, res) => {
 app.post('/api/subscribe', (req, res) => {
   const { anime_name, anime_url } = req.body;
   if (!anime_name || !anime_url) return res.status(400).json({ error: 'Champs manquants' });
-  if (!anime_url.startsWith('https://voir-anime.to/anime/')) return res.status(400).json({ error: 'URL invalide' });
+  if (!anime_url.startsWith('https://voir-anime.to/anime/'))
+    return res.status(400).json({ error: 'URL invalide' });
   const subs = readSubs();
-  if (subs.find(s => s.anime_url === anime_url)) return res.status(409).json({ error: 'Déjà abonné' });
+  if (subs.find((s) => s.anime_url === anime_url))
+    return res.status(409).json({ error: 'Déjà abonné' });
 
   // Utilisation de la variable masquée
   subs.push({ anime_name, anime_url, discord_webhook: DISCORD_WEBHOOK, last_episode: 0 });
@@ -109,7 +117,7 @@ app.post('/api/subscribe', (req, res) => {
 
 app.delete('/api/unsubscribe', (req, res) => {
   const { anime_url } = req.body;
-  writeSubs(readSubs().filter(s => s.anime_url !== anime_url));
+  writeSubs(readSubs().filter((s) => s.anime_url !== anime_url));
   res.json({ success: true });
 });
 
