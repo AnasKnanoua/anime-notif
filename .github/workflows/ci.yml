@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════
+  # Job 1 — Qualité de code (lint + format + tests)
+  # ═══════════════════════════════════════════════════════════════════════
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Vérifier le formatage
+        run: npm run format:check
+
+      - name: Tests
+        run: npm test
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Job 2 — Sécurité (secrets + vulnérabilités)
+  # ═══════════════════════════════════════════════════════════════════════
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan de secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Audit des dépendances
+        run: npm audit --audit-level=high || true
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # Job 3 — Build et scan de l'image Docker
+  # ═══════════════════════════════════════════════════════════════════════
+  build:
+    needs: [quality, security]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    env:
+      IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Normaliser le nom d'image en minuscules
+        run: echo "IMAGE_PREFIX=${IMAGE_PREFIX,,}" >> "$GITHUB_ENV"
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Build des images ───────────────────────────────────────────────
+      - name: Build image web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          load: true
+          tags: ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
+
+      - name: Build image worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/worker/Dockerfile
+          load: true
+          tags: ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }}
+
+      # ── Scan de sécurité des images ────────────────────────────────────
+      - name: Scan Trivy — web
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          trivyignores: .trivyignore
+
+      - name: Scan Trivy — worker
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          trivyignores: .trivyignore
+
+      # ── Push (seulement sur main, pas sur les PR) ─────────────────────
+      - name: Push images
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          docker push ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
+          docker push ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }}
+
+          docker tag ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }} \
+                     ${{ env.IMAGE_PREFIX }}/web:latest
+          docker tag ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }} \
+                     ${{ env.IMAGE_PREFIX }}/worker:latest
+          docker push ${{ env.IMAGE_PREFIX }}/web:latest
+          docker push ${{ env.IMAGE_PREFIX }}/worker:latest
