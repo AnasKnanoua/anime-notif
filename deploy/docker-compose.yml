@@ -80,30 +80,30 @@ services:
       # Autoheal a besoin de parler au démon Docker pour redémarrer
       # des conteneurs — accès sensible, on y revient juste après.
       - /var/run/docker.sock:/var/run/docker.sock:ro
-worker:
-    build:
-      context: ..
-      dockerfile: src/worker/Dockerfile
-    image: anime-notif-worker:${IMAGE_TAG:-dev}
-    container_name: anime-notif-worker
-    restart: unless-stopped
-    env_file: ../.env
-    environment:
-      NODE_ENV: production
-      TZ: ${TZ:-Europe/Paris}
-    volumes:
-      - ../data:/data
-    labels:
-      - "autoheal=true"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 128M
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    security_opt:
-      - no-new-privileges:true
+  worker:
+      build:
+        context: ..
+        dockerfile: src/worker/Dockerfile
+      image: anime-notif-worker:${IMAGE_TAG:-dev}
+      container_name: anime-notif-worker
+      restart: unless-stopped
+      env_file: ../.env
+      environment:
+        NODE_ENV: production
+        TZ: ${TZ:-Europe/Paris}
+      volumes:
+        - ../data:/data
+      labels:
+        - "autoheal=true"
+      deploy:
+        resources:
+          limits:
+            cpus: '0.25'
+            memory: 128M
+      logging:
+        driver: json-file
+        options:
+          max-size: "10m"
+          max-file: "3"
+      security_opt:
+        - no-new-privileges:true

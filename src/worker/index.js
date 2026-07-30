@@ -217,6 +217,13 @@ async function runCycle() {
     touchHeartbeat();
     await pingUptimeKuma();
   }
+
+  const PUSH_URL = process.env.UPTIME_KUMA_PUSH_URL;
+  if (PUSH_URL) {
+    try {
+      await fetch(`${PUSH_URL}?status=up&msg=OK&ping=`, { signal: AbortSignal.timeout(5_000) });
+    } catch { /* non bloquant */ }
+  }
 }
 
 
