@@ -24,3 +24,31 @@ CVE-2026-22184
 
 # picomatch (dépendance interne npm, ReDoS)
 CVE-2026-33671
+
+# tar (interne npm)
+CVE-2026-59873
+CVE-2026-23745
+CVE-2026-23950
+CVE-2026-24842
+CVE-2026-26960
+CVE-2026-29786
+CVE-2026-31802
+CVE-2026-59874
+
+# brace-expansion (interne npm)
+CVE-2026-13149
+CVE-2026-14257
+
+# minimatch (interne npm)
+CVE-2026-26996
+CVE-2026-27903
+CVE-2026-27904
+
+# glob (interne npm)
+CVE-2025-64756
+
+# sigstore (interne npm)
+CVE-2026-48815
+
+# picomatch (interne npm)
+CVE-2026-33671
