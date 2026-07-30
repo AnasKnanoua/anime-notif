@@ -36,3 +36,24 @@ repos:
       - id: commitlint
         stages: [commit-msg]
         additional_dependencies: ['@commitlint/config-conventional']
+
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: npx eslint
+        language: system
+        files: '\.js$'
+        types: [file]
+      - id: prettier
+        name: prettier
+        entry: npx prettier --check
+        language: system
+        files: '\.(js|json|yml|yaml|md)$'
+        types: [file]
+      - id: tests
+        name: vitest
+        entry: npx vitest run
+        language: system
+        pass_filenames: false
+        always_run: true

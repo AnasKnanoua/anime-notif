@@ -6,14 +6,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const required = ['DEFAULT_DISCORD_WEBHOOK'];
-const missing = required.filter(key => !process.env[key]);
+const missing = required.filter((key) => !process.env[key]);
 
 if (missing.length > 0) {
-  console.error(JSON.stringify({
-    level: 'fatal',
-    msg: 'Variables d\'environnement manquantes — voir .env.example',
-    missing,
-  }));
+  console.error(
+    JSON.stringify({
+      level: 'fatal',
+      msg: "Variables d'environnement manquantes — voir .env.example",
+      missing,
+    }),
+  );
   process.exit(1);
 }
 
@@ -30,8 +32,9 @@ module.exports = {
 
   // Identifie poliment ton scraper auprès du site cible.
   // Un User-Agent réaliste évite les blocages par détection de bots simples.
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-           + '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  userAgent:
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+    '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
 
   // URL de push Uptime Kuma — optionnelle, le worker fonctionne sans.
   uptimeKumaPushUrl: process.env.UPTIME_KUMA_PUSH_URL || null,
