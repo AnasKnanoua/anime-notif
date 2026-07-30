@@ -12,8 +12,8 @@
     "start": "node src/web/server.js",
     "dev": "node --watch src/web/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint src/ tests/",
-    "lint:fix": "eslint src/ tests/ --fix",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
     "format": "prettier --write src/",
     "format:check": "prettier --check src/"
   },
