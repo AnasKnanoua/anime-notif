@@ -5,7 +5,8 @@ const app = express();
 const packageJson = require('../../package.json');
 
 app.use(express.json());
-app.use(express.static('public'));
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
 
 const SUBS_PATH = process.env.SUBSCRIPTIONS_PATH;
 

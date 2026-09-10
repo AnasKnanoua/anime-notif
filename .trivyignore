@@ -52,3 +52,9 @@ CVE-2026-48815
 
 # picomatch (interne npm)
 CVE-2026-33671
+
+# ─── Nouvelles CVE npm internes (revue 2026-09-10) ───
+CVE-2026-69152
+CVE-2026-69192
+CVE-2026-9496
+CVE-2026-73566
