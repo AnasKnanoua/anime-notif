@@ -107,3 +107,34 @@ services:
           max-file: "3"
       security_opt:
         - no-new-privileges:true
+
+
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: anime-notif-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"       # nécessaire pour le challenge ACME Let's Encrypt
+      - "443:443"     # HTTPS
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data        # certificats TLS persistants
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  caddy-data:
+  caddy-config:
