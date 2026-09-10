@@ -4,6 +4,11 @@ const bcrypt = require('bcryptjs'); // ◄ Ajout de bcrypt pour la sécurité
 const app = express();
 const packageJson = require('../../package.json');
 
+const { metricsMiddleware, metricsHandler } = require('./metrics');
+
+app.use(metricsMiddleware);
+app.get('/metrics', metricsHandler);
+
 app.use(express.json());
 const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));

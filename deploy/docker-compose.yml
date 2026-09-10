@@ -22,7 +22,7 @@ services:
     ports:
       # Écoute uniquement sur la loopback : le service n'est joignable que
       # via Tailscale ou le tunnel Cloudflare, jamais exposé au réseau local.
-      - "127.0.0.1:${ANIME_WEB_HOST_PORT:-3001}:3000"
+      - '127.0.0.1:${ANIME_WEB_HOST_PORT:-3001}:3000'
 
     volumes:
       # L'état vit sur l'hôte, jamais dans l'image : le conteneur reste
@@ -30,7 +30,7 @@ services:
       - ../data:/data
 
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:3000/health']
       interval: 30s
       timeout: 3s
       start_period: 10s
@@ -49,21 +49,21 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
     security_opt:
       # Interdit au processus d'acquérir de nouveaux privilèges (setuid).
       - no-new-privileges:true
 
     labels:
-      - "autoheal=true"
+      - 'autoheal=true'
   uptime-kuma:
     image: louislam/uptime-kuma:1.23.16
     container_name: anime-notif-uptime-kuma
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3002:3001"
+      - '127.0.0.1:3002:3001'
     volumes:
       - ../data/uptime-kuma:/app/data
     security_opt:
@@ -81,44 +81,45 @@ services:
       # des conteneurs — accès sensible, on y revient juste après.
       - /var/run/docker.sock:/var/run/docker.sock:ro
   worker:
-      build:
-        context: ..
-        dockerfile: src/worker/Dockerfile
-      image: anime-notif-worker:${IMAGE_TAG:-dev}
-      container_name: anime-notif-worker
-      restart: unless-stopped
-      env_file: ../.env
-      environment:
-        NODE_ENV: production
-        TZ: ${TZ:-Europe/Paris}
-      volumes:
-        - ../data:/data
-      labels:
-        - "autoheal=true"
-      deploy:
-        resources:
-          limits:
-            cpus: '0.25'
-            memory: 128M
-      logging:
-        driver: json-file
-        options:
-          max-size: "10m"
-          max-file: "3"
-      security_opt:
-        - no-new-privileges:true
-
+    build:
+      context: ..
+      dockerfile: src/worker/Dockerfile
+    image: anime-notif-worker:${IMAGE_TAG:-dev}
+    container_name: anime-notif-worker
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-Europe/Paris}
+    volumes:
+      - ../data:/data
+    labels:
+      - 'autoheal=true'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - '9091'
 
   caddy:
     image: caddy:2.9-alpine
     container_name: anime-notif-caddy
     restart: unless-stopped
     ports:
-      - "80:80"       # nécessaire pour le challenge ACME Let's Encrypt
-      - "443:443"     # HTTPS
+      - '80:80' # nécessaire pour le challenge ACME Let's Encrypt
+      - '443:443' # HTTPS
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data        # certificats TLS persistants
+      - caddy-data:/data # certificats TLS persistants
       - caddy-config:/config
     depends_on:
       web:
@@ -131,10 +132,107 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
     security_opt:
       - no-new-privileges:true
+
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    container_name: anime-notif-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.path=/prometheus'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - '127.0.0.1:9090:9090'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+    security_opt:
+      - no-new-privileges:true
+
+  loki:
+    image: grafana/loki:3.5.0
+    container_name: anime-notif-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./monitoring/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    expose:
+      - '3100'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  promtail:
+    image: grafana/promtail:3.5.0
+    container_name: anime-notif-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./monitoring/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.15'
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: anime-notif-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - ./monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - '127.0.0.1:3003:3000'
+    depends_on:
+      - prometheus
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 volumes:
   caddy-data:
   caddy-config:
+  prometheus-data:
+  loki-data:
+  grafana-data:
