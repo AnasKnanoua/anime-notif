@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'anime-web'
+    static_configs:
+      - targets: ['web:3000'] # port INTERNE du conteneur
+    metrics_path: /metrics
+
+  - job_name: 'anime-worker'
+    static_configs:
+      - targets: ['worker:9091']
+    metrics_path: /metrics
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

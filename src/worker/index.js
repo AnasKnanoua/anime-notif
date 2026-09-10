@@ -7,7 +7,14 @@
 //
 // Ce fichier remplace entièrement ton workflow n8n.
 // ─────────────────────────────────────────────────────────────────────────────
-
+const {
+  scrapeCyclesTotal,
+  episodesNotifiedTotal,
+  scrapeErrorsTotal,
+  scrapeCycleDuration,
+  animesTracked,
+  startMetricsServer,
+} = require('./metrics');
 const fs = require('fs');
 const config = require('./config');
 const { readSubscriptions, writeSubscriptions } = require('./state');
@@ -54,7 +61,6 @@ async function pingUptimeKuma() {
     /* non bloquant — Uptime Kuma est un bonus, pas une dépendance */
   }
 }
-
 /**
  * Exécute un cycle complet de vérification.
  */
@@ -68,6 +74,7 @@ async function runCycle() {
     );
     return;
   }
+  const endTimer = scrapeCycleDuration.startTimer();
 
   running = true;
   const cycleStart = Date.now();
@@ -79,6 +86,7 @@ async function runCycle() {
     let subs;
     try {
       subs = readSubscriptions(config.subscriptionsPath);
+      animesTracked.set(subs.length);
     } catch (err) {
       console.error(
         JSON.stringify({
@@ -101,6 +109,7 @@ async function runCycle() {
       });
 
       if (!result) {
+        scrapeErrorsTotal.inc({ anime: sub.anime_name });
         console.log(
           JSON.stringify({
             level: 'warn',
@@ -143,6 +152,7 @@ async function runCycle() {
         if (success) {
           lastSuccessful = ep;
           notified++;
+          episodesNotifiedTotal.inc();
           console.log(
             JSON.stringify({
               level: 'info',
@@ -200,6 +210,7 @@ async function runCycle() {
       }),
     );
   } catch (err) {
+    scrapeCyclesTotal.inc({ status: 'error' });
     console.error(
       JSON.stringify({
         level: 'error',
@@ -212,6 +223,8 @@ async function runCycle() {
     running = false;
     touchHeartbeat();
     await pingUptimeKuma();
+    endTimer();
+    scrapeCyclesTotal.inc({ status: 'success' });
   }
 }
 
@@ -229,7 +242,7 @@ console.log(
     subscriptions_path: config.subscriptionsPath,
   }),
 );
-
+startMetricsServer(9091);
 // Premier cycle immédiat
 runCycle();
 
