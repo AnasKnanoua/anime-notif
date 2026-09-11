@@ -1,0 +1,35 @@
+groups:
+  - name: anime-web
+    rules:
+      - alert: WebDown
+        expr: up{job="anime-web"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'anime-web est indisponible'
+          description: 'Prometheus ne joint plus anime-web depuis 1 minute.'
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="anime-web", status_code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="anime-web"}[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taux d'erreur HTTP > 5%"
+          description: '{{ $value | humanizePercentage }} des requêtes échouent.'
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="anime-web"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Latence p95 > 2 secondes'
+          description: 'Le 95e percentile est à {{ $value }}s.'
