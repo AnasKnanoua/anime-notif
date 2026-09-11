@@ -22,18 +22,22 @@
   "dependencies": {
     "@prometheus-io/client": "^0.16.1",
     "bcryptjs": "^3.0.3",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.8.0",
     "prettier": "^3.9.6",
+    "semantic-release": "^25.0.9",
     "vitest": "^4.1.10"
   }
 }
