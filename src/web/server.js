@@ -13,6 +13,16 @@ app.use(express.json());
 const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
+const rateLimit = require('express-rate-limit');
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requêtes max par IP
+  message: { error: 'Trop de requêtes, réessaie plus tard' },
+});
+
+app.use('/api', apiLimiter); // AVANT le middleware d'auth
+
 const SUBS_PATH = process.env.SUBSCRIPTIONS_PATH;
 
 // 🔒 Sécurisation des secrets via l'environnement
@@ -99,7 +109,9 @@ function readSubs() {
 }
 
 function writeSubs(data) {
-  fs.writeFileSync(SUBS_PATH, JSON.stringify(data, null, 2));
+  const tmp = SUBS_PATH + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+  fs.renameSync(tmp, SUBS_PATH);
 }
 
 app.get('/api/subscriptions', (req, res) => {
@@ -128,5 +140,3 @@ app.delete('/api/unsubscribe', (req, res) => {
   writeSubs(readSubs().filter((s) => s.anime_url !== anime_url));
   res.json({ success: true });
 });
-
-app.listen(3000, () => console.log('Anime Tracker running on port 3000'));
