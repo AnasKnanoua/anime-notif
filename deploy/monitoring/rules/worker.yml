@@ -1,0 +1,20 @@
+groups:
+  - name: anime-worker
+    rules:
+      - alert: WorkerDown
+        expr: up{job="anime-worker"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Le worker de scraping est indisponible'
+          description: 'Prometheus ne joint plus le worker depuis 2 minutes.'
+
+      - alert: NoScrapeCycles
+        expr: rate(scrape_cycles_total{status="success"}[1h]) == 0
+        for: 45m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Aucun cycle de scraping réussi depuis 45 minutes'
+          description: 'Le worker tourne mais ne scrape plus. Vérifier les logs.'

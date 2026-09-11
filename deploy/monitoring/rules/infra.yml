@@ -1,0 +1,11 @@
+groups:
+  - name: infrastructure
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'La cible {{ $labels.job }} est indisponible'
+          description: 'Prometheus ne joint plus {{ $labels.instance }}.'

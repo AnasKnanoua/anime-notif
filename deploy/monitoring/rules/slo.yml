@@ -1,0 +1,42 @@
+groups:
+  - name: slo-recording
+    interval: 1m
+    rules:
+      - record: slo:web_availability:ratio_rate30d
+        expr: |
+          sum(increase(http_requests_total{job="anime-web", status_code!~"5.."}[30d]))
+          /
+          sum(increase(http_requests_total{job="anime-web"}[30d]))
+
+      - record: slo:web_availability:error_budget_consumed
+        expr: |
+          1 - (
+            (slo:web_availability:ratio_rate30d - 0.995)
+            /
+            (1 - 0.995)
+          )
+
+      - record: slo:scraping_reliability:ratio_rate30d
+        expr: |
+          sum(increase(scrape_cycles_total{status="success"}[30d]))
+          /
+          sum(increase(scrape_cycles_total[30d]))
+
+      - record: slo:scraping_reliability:error_budget_consumed
+        expr: |
+          1 - (
+            (slo:scraping_reliability:ratio_rate30d - 0.99)
+            /
+            (1 - 0.99)
+          )
+
+  - name: slo-alerts
+    rules:
+      - alert: WebBudgetBurning
+        expr: slo:web_availability:error_budget_consumed > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Error budget web consommé à {{ $value | humanizePercentage }}'
+          description: 'Envisager de geler les déploiements et stabiliser.'
