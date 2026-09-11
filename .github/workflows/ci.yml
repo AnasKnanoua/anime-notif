@@ -134,3 +134,83 @@ jobs:
                      ${{ env.IMAGE_PREFIX }}/worker:latest
           docker push ${{ env.IMAGE_PREFIX }}/web:latest
           docker push ${{ env.IMAGE_PREFIX }}/worker:latest
+  #-------------------------------------------------------------
+  #Job Integration
+  #-------------------------------------------------------------
+  integration:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Créer un .env de test
+        run: |
+          cat > .env << 'EOF'
+          ANIME_WEB_PASSWORD_HASH=$2b$12$abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012
+          DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/000/test
+          DEFAULT_DISCORD_WEBHOOK=https://discord.com/api/webhooks/000/test
+          SUBSCRIPTIONS_PATH=/data/subscriptions.json
+          TZ=Europe/Paris
+          SCRAPE_INTERVAL_MINUTES=30
+          GRAFANA_ADMIN_PASSWORD=test
+          EOF
+
+      - name: Préparer les données de test
+        run: |
+          mkdir -p data
+          cp subscriptions.example.json data/subscriptions.json
+
+      - name: Lancer uniquement le service web
+        run: |
+          docker compose -f deploy/docker-compose.yml up -d --build web
+
+      - name: Attendre que le service soit healthy
+        run: |
+          echo "Attente du démarrage..."
+          for i in $(seq 1 30); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' anime-notif-web 2>/dev/null || echo "starting")
+            echo "Tentative $i : $status"
+            if [ "$status" = "healthy" ]; then
+              echo "✅ Le service est healthy"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "❌ Le service n'est jamais devenu healthy"
+          docker compose -f deploy/docker-compose.yml logs web
+          exit 1
+
+      - name: Vérifier que /health répond
+        run: |
+          curl -f http://localhost:3001/health || {
+            echo "❌ /health ne répond pas"
+            docker compose -f deploy/docker-compose.yml logs web
+            exit 1
+          }
+
+      - name: Nettoyer
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml down -v
+
+  #---------------------------------------------------------------------------------------
+  #Job Release
+  #---------------------------------------------------------------------------------------
+  release:
+    needs: [integration]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
