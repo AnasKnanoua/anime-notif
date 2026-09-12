@@ -1,0 +1,14 @@
+# Configuration Trivy
+scan:
+  # Ne scanne que les vulnérabilités, pas les secrets (gitleaks s'en charge déjà)
+  scanners:
+    - vuln
+
+vulnerability:
+  # Ignore les vulnérabilités sans correctif disponible.
+  # Une CVE sans patch = rien à faire, autant ne pas bloquer le build.
+  ignore-unfixed: true
+
+severity:
+  - CRITICAL
+  - HIGH

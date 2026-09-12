@@ -58,6 +58,11 @@ services:
 
     labels:
       - 'autoheal=true'
+
+    read_only: true
+    tmpfs:
+      - /tmp
+
   uptime-kuma:
     image: louislam/uptime-kuma:1.23.16
     container_name: anime-notif-uptime-kuma
@@ -109,6 +114,9 @@ services:
       - no-new-privileges:true
     expose:
       - '9091'
+    read_only: true
+    tmpfs:
+      - /tmp
 
   caddy:
     image: caddy:2.9-alpine
@@ -211,7 +219,7 @@ services:
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
       GF_USERS_ALLOW_SIGN_UP: 'false'
     volumes:
       - ./monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro

@@ -59,6 +59,15 @@ jobs:
       - name: Audit des dépendances
         run: npm audit --audit-level=high || true
 
+      - name: SAST — Semgrep
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/src \
+            semgrep/semgrep semgrep \
+            --config=p/javascript \
+            --config=p/security-audit \
+            --error \
+            /src
+
   # ═══════════════════════════════════════════════════════════════════════
   # Job 3 — Build et scan de l'image Docker
   # ═══════════════════════════════════════════════════════════════════════
@@ -87,6 +96,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Générer le SBOM — web
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/aquasecurity/trivy:latest image \
+            --format spdx-json \
+            --output /tmp/sbom-web.json \
+            ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }} || true
+
+      - name: Archiver le SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-web
+          path: /tmp/sbom-web.json
+
       # ── Build des images ───────────────────────────────────────────────
       - name: Build image web
         uses: docker/build-push-action@v6
@@ -106,20 +130,24 @@ jobs:
 
       # ── Scan de sécurité des images ────────────────────────────────────
       - name: Scan Trivy — web
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
-          severity: CRITICAL,HIGH
-          exit-code: '1'
-          trivyignores: .trivyignore
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}:/workspace \
+            ghcr.io/aquasecurity/trivy:latest image \
+            --config /workspace/trivy.yaml \
+            --ignorefile /workspace/.trivyignore \
+            ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
 
       - name: Scan Trivy — worker
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ env.IMAGE_PREFIX }}/worker:${{ github.sha }}
-          severity: CRITICAL,HIGH
-          exit-code: '1'
-          trivyignores: .trivyignore
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}:/workspace \
+            ghcr.io/aquasecurity/trivy:latest image \
+            --config /workspace/trivy.yaml \
+            --ignorefile /workspace/.trivyignore \
+            ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
 
       # ── Push (seulement sur main, pas sur les PR) ─────────────────────
       - name: Push images

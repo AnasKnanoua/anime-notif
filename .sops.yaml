@@ -1,0 +1,3 @@
+creation_rules:
+  - path_regex: \.enc\.env$
+    age: age1taeuuvysdpgy9lccadwl0g45qfjvcqp5dsfjn6pxkfufkuutf9ts9valqt # ← ta clé PUBLIQUE
