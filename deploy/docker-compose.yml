@@ -58,6 +58,11 @@ services:
 
     labels:
       - 'autoheal=true'
+
+    read_only: true
+    tmpfs:
+      - /tmp
+
   uptime-kuma:
     image: louislam/uptime-kuma:1.23.16
     container_name: anime-notif-uptime-kuma
@@ -109,6 +114,9 @@ services:
       - no-new-privileges:true
     expose:
       - '9091'
+    read_only: true
+    tmpfs:
+      - /tmp
 
   caddy:
     image: caddy:2.9-alpine
