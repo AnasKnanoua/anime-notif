@@ -1,0 +1,75 @@
+---
+- name: Configuration du serveur Anime Notif
+  hosts: production
+  become: true # exécute en sudo
+
+  tasks:
+    # ── Paquets système ──────────────────────────────────────────────
+    - name: Installer les paquets de base
+      dnf:
+        name:
+          - git
+          - curl
+          - fail2ban
+          - firewalld
+        state: present
+
+    # ── Utilisateur de déploiement ───────────────────────────────────
+    - name: S'assurer que l'utilisateur anas est dans le groupe docker
+      user:
+        name: anas
+        groups: docker
+        append: true
+
+    # ── Pare-feu ─────────────────────────────────────────────────────
+    - name: Activer et démarrer firewalld
+      systemd:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Ouvrir les ports HTTP et HTTPS
+      firewalld:
+        service: '{{ item }}'
+        permanent: true
+        immediate: true
+        state: enabled
+      loop:
+        - http
+        - https
+        - ssh
+
+    # ── fail2ban ─────────────────────────────────────────────────────
+    - name: Activer et démarrer fail2ban
+      systemd:
+        name: fail2ban
+        state: started
+        enabled: true
+
+    # ── Durcissement SSH ─────────────────────────────────────────────
+    - name: Désactiver le login root en SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify: Redémarrer sshd
+
+    - name: Désactiver l'authentification par mot de passe
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+      notify: Redémarrer sshd
+
+    # ── Docker actif au boot ─────────────────────────────────────────
+    - name: S'assurer que Docker démarre au boot
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Redémarrer sshd
+      systemd:
+        name: sshd
+        state: restarted
