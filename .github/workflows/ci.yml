@@ -96,6 +96,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Générer le SBOM — web
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/aquasecurity/trivy:latest image \
+            --format spdx-json \
+            --output /tmp/sbom-web.json \
+            ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }} || true
+
+      - name: Archiver le SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-web
+          path: /tmp/sbom-web.json
+
       # ── Build des images ───────────────────────────────────────────────
       - name: Build image web
         uses: docker/build-push-action@v6
