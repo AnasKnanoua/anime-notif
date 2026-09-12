@@ -1,12 +1,29 @@
 #!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# Déploiement de production avec rollback automatique.
+#
+# Usage : depuis la racine du projet, ./scripts/deploy.sh
+#
+# Le staging se teste séparément et à la demande (voir README).
+# Ce script ne gère QUE la production :
+#   1. sauvegarde le commit actuel
+#   2. récupère le nouveau code
+#   3. déploie
+#   4. vérifie que le service web devient healthy
+#   5. revient automatiquement en arrière si ça échoue
+# ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
-cd "$(dirname "$0")/.."
+
+cd "$(dirname "$0")/.."   # se placer à la racine du projet
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
 
+# ── 1. Sauvegarder le commit actuel (pour rollback) ──────────────────────────
 PREVIOUS_COMMIT=$(git rev-parse HEAD)
-log "Commit actuel : $PREVIOUS_COMMIT"
+log "Commit actuel sauvegardé : $PREVIOUS_COMMIT"
 
+# ── 2. Récupérer le nouveau code ─────────────────────────────────────────────
+log "Récupération du nouveau code..."
 git fetch origin main
 git checkout main
 git pull origin main
@@ -17,49 +34,35 @@ if [ "$PREVIOUS_COMMIT" = "$NEW_COMMIT" ]; then
   exit 0
 fi
 
-# ── ÉTAPE 1 : déployer en STAGING d'abord ────────────────────────────
-log "🧪 Déploiement en STAGING..."
+log "Déploiement de $NEW_COMMIT"
+
+# ── 3. Déployer la production ────────────────────────────────────────────────
 cd deploy
-docker compose -f docker-compose.staging.yml up -d --build
-
-log "Vérification du staging..."
-STAGING_OK=false
-for i in $(seq 1 30); do
-  status=$(docker inspect --format='{{.State.Health.Status}}' anime-notif-web-staging 2>/dev/null || echo "starting")
-  if [ "$status" = "healthy" ]; then STAGING_OK=true; break; fi
-  sleep 3
-done
-
-if [ "$STAGING_OK" != "true" ]; then
-  log "❌ Le staging ne démarre pas — ARRÊT, la prod n'est pas touchée"
-  docker compose -f docker-compose.staging.yml logs web-staging
-  cd ..
-  git checkout "$PREVIOUS_COMMIT"
-  exit 1
-fi
-log "✅ Staging healthy"
-
-# ── ÉTAPE 2 : déployer en PROD ───────────────────────────────────────
-log "🚀 Déploiement en PROD..."
 docker compose up -d --build
 
-log "Vérification de la prod..."
-PROD_OK=false
+# ── 4. Vérifier que le web devient healthy ───────────────────────────────────
+log "Vérification de la santé du service..."
+HEALTHY=false
 for i in $(seq 1 30); do
   status=$(docker inspect --format='{{.State.Health.Status}}' anime-notif-web 2>/dev/null || echo "starting")
-  if [ "$status" = "healthy" ]; then PROD_OK=true; break; fi
+  log "Tentative $i : $status"
+  if [ "$status" = "healthy" ]; then
+    HEALTHY=true
+    break
+  fi
   sleep 3
 done
 
-# ── ÉTAPE 3 : rollback prod si échec ─────────────────────────────────
-if [ "$PROD_OK" = "true" ]; then
-  log "✅ Déploiement PROD réussi"
+# ── 5. Rollback automatique si échec ─────────────────────────────────────────
+if [ "$HEALTHY" = "true" ]; then
+  log "✅ Déploiement réussi — service healthy"
 else
-  log "❌ La prod ne démarre pas — ROLLBACK"
+  log "❌ Le service n'est pas devenu healthy — ROLLBACK en cours"
+  docker compose logs --tail 30 web
   cd ..
   git checkout "$PREVIOUS_COMMIT"
   cd deploy
   docker compose up -d --build
-  log "↩️  Retour à $PREVIOUS_COMMIT"
+  log "↩️  Retour à la version précédente : $PREVIOUS_COMMIT"
   exit 1
 fi

@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     image: anime-notif-web:staging
     container_name: anime-notif-web-staging
-    restart: unless-stopped
+    restart: no
     env_file: ../.env.staging
     environment:
       NODE_ENV: production
@@ -36,7 +36,7 @@ services:
       dockerfile: src/worker/Dockerfile
     image: anime-notif-worker:staging
     container_name: anime-notif-worker-staging
-    restart: unless-stopped
+    restart: no
     env_file: ../.env.staging
     environment:
       NODE_ENV: production
