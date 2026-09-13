@@ -57,7 +57,7 @@ fi
 # ── 5. Restaurer Uptime Kuma ─────────────────────────────────────────────────
 if [ -f "$EXTRACTED/uptime-kuma.tar.gz" ]; then
   log "Restauration d'Uptime Kuma..."
-  tar xzf "$EXTRACTED/uptime-kuma.tar.gz" -C "$PROJECT_ROOT/data"
+  sudo tar xzf "$EXTRACTED/uptime-kuma.tar.gz" -C "$PROJECT_ROOT/data" --no-same-owner
 fi
 
 # ── 6. Restaurer les volumes Docker ──────────────────────────────────────────
