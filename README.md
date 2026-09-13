@@ -1,5 +1,7 @@
 # Anime Notif
 
+![CI](https://github.com/AnasKnanoua/anime-notif/actions/workflows/ci.yml/badge.svg)
+
 > Notifications Discord automatiques à la sortie d'un nouvel épisode d'anime.
 
 Anime Notif surveille les pages d'animes de [voir-anime.to](https://voir-anime.to)
@@ -235,6 +237,12 @@ ssh -L 3003:localhost:3003 -L 9090:localhost:9090 anas@<IP_VPS>
 - Grafana : `http://localhost:3003` (dashboards, 4 signaux dorés, error budgets)
 - Prometheus : `http://localhost:9090` (métriques brutes, cibles, règles d'alerte)
 - Uptime Kuma : `http://localhost:3002` (surveillance externe)
+
+## Documentation
+
+- [Architecture Decision Records](docs/adr/) — les décisions techniques et leur justification
+- [Runbooks](docs/runbooks/) — procédures de résolution d'incidents
+- [Disaster Recovery](docs/runbooks/disaster-recovery.md) — reconstruction depuis zéro
 
 ## Licence
 
