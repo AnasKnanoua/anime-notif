@@ -23,11 +23,11 @@ docker compose logs --tail 60 worker
 
 Trois cas à distinguer :
 
-**Cas 1 — voir-anime.to est indisponible.**
+**Cas 1 — voiranime.cx est indisponible.**
 Logs remplis de `"page inaccessible"` ou `"scraping échoué"`.
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" https://voir-anime.to/
+curl -s -o /dev/null -w "%{http_code}\n" https://voiranime.cx/
 # 200 = site up (le problème est ailleurs)
 # 5xx, 000, ou timeout = site down
 ```
@@ -40,7 +40,7 @@ Logs `"aucun épisode trouvé sur la page"` sur des animes qui marchaient avant.
 
 ```bash
 # Tester manuellement l'extraction sur un anime connu
-curl -s "https://voir-anime.to/anime/mushoku-tensei-3/" | grep -o 'href="[^"]*vostfr[^"]*"' | head -3
+curl -s "https://voiranime.cx/anime/mushoku-tensei-3/" | grep -o 'href="[^"]*vostfr[^"]*"' | head -3
 ```
 
 Si aucun résultat, la regex dans `src/worker/scraper.js` ne correspond plus au

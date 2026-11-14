@@ -175,8 +175,8 @@
           <label>Nom de l'anime</label>
           <input id="anime-name" type="text" placeholder="Ex: Solo Leveling" />
           <label>URL sur VoirAnime</label>
-          <input id="anime-url" type="text" placeholder="https://voir-anime.to/anime/..." />
-          <p class="hint">Va sur voir-anime.to, ouvre la page de l'anime et copie l'URL.</p>
+          <input id="anime-url" type="text" placeholder="https://voiranime.cx/anime/..." />
+          <p class="hint">Va sur voiranime.cx, ouvre la page de l'anime et copie l'URL.</p>
           <button class="primary" onclick="subscribe()">+ S'abonner</button>
           <div class="msg" id="msg-add"></div>
         </div>
@@ -238,7 +238,8 @@
           msg.className = 'msg err';
           return;
         }
-        if (!url.startsWith('https://voir-anime.to/anime/')) {
+        // Vérification légère côté navigateur ; le serveur vérifie le domaine exact.
+        if (!/^https:\/\/[^/]+\/anime\/.+/.test(url)) {
           msg.textContent = 'URL invalide.';
           msg.className = 'msg err';
           return;

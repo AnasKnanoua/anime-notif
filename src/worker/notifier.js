@@ -23,7 +23,8 @@ async function downloadImage(imageUrl, userAgent) {
         'User-Agent': userAgent,
         // Referer nécessaire : certains CDN bloquent les requêtes sans referer.
         // Ton workflow n8n l'incluait aussi.
-        Referer: 'https://voir-anime.to/',
+        // Déduit du domaine de l'image : plus besoin de le changer à la main.
+        Referer: new URL(imageUrl).origin + '/',
       },
       signal: AbortSignal.timeout(10_000),
     });
