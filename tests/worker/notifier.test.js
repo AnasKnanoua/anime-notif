@@ -19,7 +19,7 @@ describe('notifyNewEpisode', () => {
       {
         animeName: 'Mushoku Tensei',
         episodeNumber: 7,
-        episodeUrl: 'https://voir-anime.to/anime/mushoku-tensei-3/ep-07-vostfr/',
+        episodeUrl: 'https://voiranime.cx/anime/mushoku-tensei-3/ep-07-vostfr/',
         imageUrl: null, // pas d'image = embed simple JSON
       },
       'TestAgent/1.0',

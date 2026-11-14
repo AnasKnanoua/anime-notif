@@ -1,24 +1,24 @@
 const { parseAnimePage } = require('../../src/worker/scraper');
 
-// HTML simulé — reproduit la structure réelle de voir-anime.to
+// HTML simulé — reproduit la structure réelle de voiranime.cx
 // sans dépendre du site. Si le site change, tu mets à jour CE HTML,
 // pas tes tests.
 const FAKE_HTML = `
 <html>
 <head>
-  <meta property="og:image" content="https://voir-anime.to/wp-content/uploads/mushoku.jpg"/>
+  <meta property="og:image" content="https://voiranime.cx/wp-content/uploads/mushoku.jpg"/>
 </head>
 <body>
   <div class="episodes">
-    <a href="https://voir-anime.to/anime/mushoku-tensei-3/mushoku-tensei-3-01-vostfr/">Ep 1</a>
-    <a href="https://voir-anime.to/anime/mushoku-tensei-3/mushoku-tensei-3-02-vostfr/">Ep 2</a>
-    <a href="https://voir-anime.to/anime/mushoku-tensei-3/mushoku-tensei-3-03-vostfr/">Ep 3</a>
+    <a href="https://voiranime.cx/anime/mushoku-tensei-3/mushoku-tensei-3-01-vostfr/">Ep 1</a>
+    <a href="https://voiranime.cx/anime/mushoku-tensei-3/mushoku-tensei-3-02-vostfr/">Ep 2</a>
+    <a href="https://voiranime.cx/anime/mushoku-tensei-3/mushoku-tensei-3-03-vostfr/">Ep 3</a>
   </div>
 </body>
 </html>
 `;
 
-const ANIME_URL = 'https://voir-anime.to/anime/mushoku-tensei-3/';
+const ANIME_URL = 'https://voiranime.cx/anime/mushoku-tensei-3/';
 
 describe('parseAnimePage', () => {
   it('trouve le dernier épisode dans le HTML', () => {
@@ -37,7 +37,7 @@ describe('parseAnimePage', () => {
   it("extrait l'image og:image", () => {
     const result = parseAnimePage(FAKE_HTML, ANIME_URL);
 
-    expect(result.imageUrl).toBe('https://voir-anime.to/wp-content/uploads/mushoku.jpg');
+    expect(result.imageUrl).toBe('https://voiranime.cx/wp-content/uploads/mushoku.jpg');
   });
 
   it('retourne null si aucun épisode trouvé', () => {
@@ -51,7 +51,7 @@ describe('parseAnimePage', () => {
   it('retourne imageUrl null si pas de meta og:image', () => {
     const htmlSansImage = `
       <body>
-        <a href="https://voir-anime.to/anime/mushoku-tensei-3/mushoku-tensei-3-05-vostfr/">Ep 5</a>
+        <a href="https://voiranime.cx/anime/mushoku-tensei-3/mushoku-tensei-3-05-vostfr/">Ep 5</a>
       </body>
     `;
 
@@ -63,8 +63,8 @@ describe('parseAnimePage', () => {
 
   it("gère les numéros d'épisodes à deux chiffres", () => {
     const html = `
-      <a href="https://voir-anime.to/anime/mushoku-tensei-3/mushoku-tensei-3-12-vostfr/">Ep 12</a>
-      <a href="https://voir-anime.to/anime/mushoku-tensei-3/mushoku-tensei-3-09-vostfr/">Ep 9</a>
+      <a href="https://voiranime.cx/anime/mushoku-tensei-3/mushoku-tensei-3-12-vostfr/">Ep 12</a>
+      <a href="https://voiranime.cx/anime/mushoku-tensei-3/mushoku-tensei-3-09-vostfr/">Ep 9</a>
     `;
 
     const result = parseAnimePage(html, ANIME_URL);
@@ -74,13 +74,26 @@ describe('parseAnimePage', () => {
 
   it("ignore les liens d'un autre anime sur la même page", () => {
     const html = `
-      <a href="https://voir-anime.to/anime/mushoku-tensei-3/mushoku-tensei-3-02-vostfr/">Ep 2</a>
-      <a href="https://voir-anime.to/anime/rezero-s4/rezero-s4-99-vostfr/">ReZero 99</a>
+      <a href="https://voiranime.cx/anime/mushoku-tensei-3/mushoku-tensei-3-02-vostfr/">Ep 2</a>
+      <a href="https://voiranime.cx/anime/rezero-s4/rezero-s4-99-vostfr/">ReZero 99</a>
     `;
 
     const result = parseAnimePage(html, ANIME_URL);
 
     // Doit trouver 2 (Mushoku), PAS 99 (ReZero)
     expect(result.episodeNumber).toBe(2);
+  });
+
+  it('accepte les liens relatifs et les rend absolus', () => {
+    const html = `
+      <a href="/anime/mushoku-tensei-3/mushoku-tensei-3-07-vostfr/">Ep 7</a>
+    `;
+
+    const result = parseAnimePage(html, ANIME_URL);
+
+    expect(result.episodeNumber).toBe(7);
+    expect(result.episodeUrl).toBe(
+      'https://voiranime.cx/anime/mushoku-tensei-3/mushoku-tensei-3-07-vostfr/',
+    );
   });
 });

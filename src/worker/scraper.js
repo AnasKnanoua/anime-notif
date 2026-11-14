@@ -1,6 +1,6 @@
 // src/worker/scraper.js
 // ─────────────────────────────────────────────────────────────────────────────
-// Scrape une page anime sur voir-anime.to et retourne les épisodes trouvés.
+// Scrape une page anime sur VoirAnime (voiranime.cx) et retourne les épisodes trouvés.
 //
 // Reproduit exactement la logique de ton workflow n8n :
 // 1. Requête GET sur la page de l'anime
@@ -18,19 +18,31 @@
  * @returns {{ episodeNumber: number, episodeUrl: string, imageUrl: string|null } | null}
  */
 function parseAnimePage(html, animeUrl) {
-  const baseSlug = animeUrl.replace('https://voir-anime.to/anime/', '').replace(/\/$/, '');
+  // On extrait le slug depuis le CHEMIN de l'URL, sans dépendre du domaine.
+  // "https://voiranime.cx/anime/mushoku-tensei-3/" → "mushoku-tensei-3"
+  // Si le site change encore de domaine, cette fonction n'a pas à bouger.
+  const pathname = new URL(animeUrl).pathname; // "/anime/mushoku-tensei-3/"
+  const baseSlug = pathname.replace(/^\/anime\//, '').replace(/\/$/, '');
 
   const escapedSlug = baseSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+  // Le domaine est libre ([^"/]+) et optionnel : on accepte aussi bien
+  //   href="https://voiranime.cx/anime/<slug>/<slug>-03-vostfr/"
+  // que des liens relatifs
+  //   href="/anime/<slug>/<slug>-03-vostfr/"
   const regex = new RegExp(
-    `href="(https://voir-anime\\.to/anime/${escapedSlug}/[^"]*-(\\d+)-vostfr[^"]*)"`,
+    `href="((?:https?://[^"/]+)?/anime/${escapedSlug}/[^"]*-(\\d+)-vostfr[^"]*)"`,
     'g',
   );
+
+  const origin = new URL(animeUrl).origin; // "https://voiranime.cx"
 
   const episodes = [];
   let match;
   while ((match = regex.exec(html)) !== null) {
-    episodes.push({ url: match[1], num: parseInt(match[2], 10) });
+    // Un lien relatif est transformé en URL absolue pour Discord.
+    const url = match[1].startsWith('/') ? origin + match[1] : match[1];
+    episodes.push({ url, num: parseInt(match[2], 10) });
   }
 
   if (episodes.length === 0) return null;
@@ -51,7 +63,7 @@ function parseAnimePage(html, animeUrl) {
 /**
  * Scrape la page d'un anime et retourne les informations du dernier épisode.
  *
- * @param {string} animeUrl — ex: "https://voir-anime.to/anime/mushoku-tensei-3/"
+ * @param {string} animeUrl — ex: "https://voiranime.cx/anime/mushoku-tensei-3/"
  * @param {object} options — { userAgent: string }
  * @returns {Promise<{episodeNumber: number, episodeUrl: string, imageUrl: string|null} | null>}
  *   null si la page est inaccessible ou qu'aucun épisode n'est trouvé.

@@ -4,7 +4,7 @@
 
 > Notifications Discord automatiques à la sortie d'un nouvel épisode d'anime.
 
-Anime Notif surveille les pages d'animes de [voir-anime.to](https://voir-anime.to)
+Anime Notif surveille les pages d'animes de [voiranime.cx](https://voiranime.cx)
 et envoie un message Discord dès qu'un nouvel épisode VOSTFR est publié. Une
 interface web protégée par mot de passe permet de gérer la liste des animes
 suivis sans toucher au serveur.
@@ -31,7 +31,7 @@ graph LR
     WEB -->|lit / écrit| SUBS[(subscriptions.json)]
 
     WORKER[worker<br/>scraper cron 30 min] -->|lit / écrit| SUBS
-    WORKER -->|scrape| VA[voir-anime.to]
+    WORKER -->|scrape| VA[voiranime.cx]
     WORKER -->|notifie| DC([Discord])
 
     subgraph VPS Oracle · Docker
